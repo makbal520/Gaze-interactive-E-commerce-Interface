@@ -1,0 +1,70 @@
+
+STATISTICAL ANALYSIS SUMMARY
+
+This study examined the effects of negative feedback on bag area fixation patterns in an eye-tracking experiment. 
+Two groups were compared: Group 1 (with negative feedback) and Group 2 (without negative feedback), each 
+consisting of two participants.
+
+DESCRIPTIVE STATISTICS:
+
+Group 1 (Negative Feedback): 189 bag fixations, 
+mean duration = 212.8ms (SD = 231.8ms), 
+total duration = 40,227ms
+
+Group 2 (No Negative Feedback): 128 bag fixations, 
+mean duration = 244.1ms (SD = 173.7ms), 
+total duration = 31,241ms
+
+NORMALITY ASSESSMENT:
+Shapiro-Wilk tests were conducted to assess normality of fixation durations. 
+Group 1: W = 0.412, p = 0.0000 
+Group 2: W = 0.741, p = 0.0000
+
+Both groups did not follow 
+normal distributions (α = 0.05).
+
+INDEPENDENT T-TEST:
+An independent t-test was conducted to compare bag fixation durations between groups.
+t(315) = -1.293, 
+p = 0.1969
+
+The difference in bag fixation durations between groups was 
+not statistically significant (α = 0.05).
+
+Effect size (Cohen's d) = -0.148, indicating a negligible effect.
+
+MANN-WHITNEY U TEST:
+A non-parametric Mann-Whitney U test was also conducted as a robust alternative.
+U = 9902.000, p = 0.0061
+
+The non-parametric test confirmed 
+the parametric test results (α = 0.05).
+
+Effect size (r) = 0.181, indicating a small effect.
+
+CHI-SQUARE TEST:
+A chi-square test of independence was conducted to examine the association between 
+experimental group and bag area fixation frequency.
+χ²(1) = 15.866, p = 0.0001
+
+The association between experimental group and bag area fixation frequency was 
+statistically significant (α = 0.05).
+
+Effect size (Cramer's V) = 0.142, indicating a small effect.
+
+CONCLUSION:
+
+The results did not reveal statistically significant differences in bag area fixation 
+patterns between the experimental groups. However, the effect sizes suggest 
+negligible practical differences that may warrant further investigation with larger sample sizes.
+
+
+LIMITATIONS:
+- Small sample size (n = 2 per group) limits statistical power
+- Individual differences may confound group effects
+- Limited generalizability due to specific experimental conditions
+
+FUTURE DIRECTIONS:
+- Replicate with larger sample sizes
+- Include additional eye-tracking metrics (saccade patterns, scan paths)
+- Investigate individual differences and moderating factors

@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopping Gaze - Fixed Version</title>
+  <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .header h1 {
+      color: #333;
+      margin-bottom: 5px;
+      font-size: 1.5em;
+    }
+
+    .header p {
+      font-size: 0.9em;
+      margin: 0;
+    }
+
+    .status {
+      padding: 8px;
+      border-radius: 6px;
+      margin: 10px 0;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+
+    .status-waiting {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .status-progress {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .status-complete {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .control-buttons {
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    .btn {
+      margin: 3px;
+      padding: 8px 15px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .start-btn {
+      background: #4caf50;
+      color: white;
+    }
+
+    .start-btn:hover {
+      background: #45a049;
+    }
+
+    .reset-btn {
+      background: #ff9800;
+      color: white;
+    }
+
+    .reset-btn:hover {
+      background: #f57c00;
+    }
+
+    .debug-btn {
+      background: #2196F3;
+      color: white;
+    }
+
+    .debug-btn:hover {
+      background: #1976D2;
+    }
+
+    /* Calibration Styles */
+    #calibrationArea {
+      position: relative;
+      width: 600px;
+      height: 400px;
+      margin: 10px auto;
+      border: 2px solid #444;
+      overflow: hidden;
+      background: white;
+      border-radius: 10px;
+    }
+
+    /* 实时凝视点显示在校准区域内 */
+    .calibration-realtime-gaze {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      background: rgba(0, 255, 0, 0.8);
+      border-radius: 50%;
+      border: 2px solid white;
+      z-index: 15;
+      pointer-events: none;
+      display: none;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      transition: all 0.1s ease;
+    }
+
+    .calibration-realtime-gaze.show {
+      display: block;
+    }
+
+    .calibration-point {
+      width: 20px;
+      height: 20px;
+      background-color: red;
+      border-radius: 50%;
+      position: absolute;
+      cursor: pointer;
+      z-index: 10;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    /* Shopping Content */
+    .shopping-content {
+      display: none;
+      margin-top: 15px;
+    }
+
+    .ad-container {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      height: 400px;
+      margin: 0 auto 30px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      background: #f8f9fa;
+    }
+
+    .ad-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.5s ease;
+    }
+
+    .ad-video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .ad-video.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Debug visualization for bag area */
+    .bag-detection-area {
+      position: absolute;
+      border: 2px dashed rgba(0, 255, 0, 0.5);
+      border-radius: 5px;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      display: none;
+    }
+
+    .bag-detection-area.show-debug {
+      display: block;
+    }
+
+    .bag-detection-area.detected {
+      border-color: #28a745;
+      border-style: solid;
+      background: rgba(40, 167, 69, 0.2);
+    }
+
+    /* Debug visualization for button area */
+    .button-detection-area {
+      position: absolute;
+      border: 2px dashed rgba(0, 255, 0, 0.5);
+      border-radius: 5px;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      display: none;
+      z-index: 10;
+    }
+
+    .button-detection-area.show-debug {
+      display: block;
+    }
+
+    .button-detection-area.detected {
+      border-color: #28a745;
+      border-style: solid;
+      background: rgba(40, 167, 69, 0.2);
+    }
+
+    /* Debug visualization for other areas */
+    .other-left-area {
+      position: absolute;
+      border: 2px dashed rgba(0, 255, 0, 0.5);
+      border-radius: 5px;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      display: none;
+      z-index: 5;
+    }
+
+    .other-left-area.show-debug {
+      display: block;
+    }
+
+    .other-left-area.detected {
+      border-color: #28a745;
+      border-style: solid;
+      background: rgba(40, 167, 69, 0.2);
+    }
+
+    .other-right-area {
+      position: absolute;
+      border: 2px dashed rgba(0, 255, 0, 0.5);
+      border-radius: 5px;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      display: none;
+      z-index: 5;
+    }
+
+    .other-right-area.show-debug {
+      display: block;
+    }
+
+    .other-right-area.detected {
+      border-color: #28a745;
+      border-style: solid;
+      background: rgba(40, 167, 69, 0.2);
+    }
+
+    /* Gaze point indicator */
+    .gaze-point {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 0, 0, 0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1000;
+      border: 3px solid white;
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+      display: none;
+      transition: all 0.1s ease;
+    }
+
+    .add-to-cart-btn {
+      display: block;
+      width: 100%;
+      max-width: 250px;
+      margin: 0 auto;
+      padding: 15px 25px;
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+    }
+
+    .add-to-cart-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+    }
+
+    .add-to-cart-btn.detected {
+      background: linear-gradient(45deg, #28a745, #20c997);
+      box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    /* Gaze Elements */
+    #gazeDot {
+      width: 15px;
+      height: 15px;
+      background: rgba(255, 0, 0, 0.7);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+      border: 2px solid white;
+      box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+
+    .debug-info {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      color: rgba(255, 255, 255, 0.7);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      max-width: 250px;
+      z-index: 100;
+      line-height: 1.4;
+      backdrop-filter: blur(5px);
+    }
+
+    .adjust-controls {
+      display: none;
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+    }
+
+    .adjust-controls.show {
+      display: block;
+    }
+
+    .adjust-controls label {
+      display: inline-block;
+      width: 100px;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    .adjust-controls input[type="range"] {
+      width: 200px;
+      margin-right: 10px;
+    }
+
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      color: white;
+      font-size: 18px;
+    }
+
+    /* Data Recording Styles */
+    .data-recording-info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      color: rgba(255, 255, 255, 0.7);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      max-width: 250px;
+      z-index: 100;
+      line-height: 1.4;
+      backdrop-filter: blur(5px);
+    }
+
+    .recording-status {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .recording-status.active {
+      background: #ff4757;
+      animation: pulse-red 1s infinite;
+    }
+
+    .recording-status.inactive {
+      background: #2ed573;
+    }
+
+    @keyframes pulse-red {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loadingScreen" class="loading-screen">
+    <div>Loading WebGazer and initializing system...</div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <h1>🛍️ Shopping Gaze</h1>
+      <p>Eye-tracking powered interactive advertisement</p>
+    </div>
+
+    <div id="calibrationStatus" class="status status-waiting">
+      Click "Start Calibration" to begin the calibration process
+    </div>
+
+    <div class="control-buttons">
+      <button class="btn start-btn" onclick="startCalibration()">Start Calibration</button>
+      <button class="btn reset-btn" onclick="resetSystem()">Reset System</button>
+      <button class="btn debug-btn" onclick="toggleDebugMode()">Toggle Debug Mode</button>
+      <button class="btn" onclick="downloadEyeTrackingData()" style="background: #6c5ce7; color: white;">Download Data</button>
+    </div>
+
+
+
+    <!-- Calibration Area -->
+    <div id="calibrationArea">
+      <div id="gazeDot"></div>
+      <!-- 实时凝视点显示 -->
+      <div class="calibration-realtime-gaze" id="calibrationRealtimeGaze"></div>
+    </div>
+
+    <!-- Shopping Content -->
+    <div class="shopping-content" id="shoppingContent">
+      <!-- Adjustment Controls -->
+      <div class="adjust-controls" id="adjustControls">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div>
+            <h3>🎯 Adjust Bag Detection Area</h3>
+            <div>
+              <label>X Position:</label>
+              <input type="range" id="bagX" min="0" max="80" value="54" oninput="updateBagArea()">
+              <span id="bagXValue">54%</span>
+            </div>
+            <div>
+              <label>Y Position:</label>
+              <input type="range" id="bagY" min="0" max="60" value="55" oninput="updateBagArea()">
+              <span id="bagYValue">55%</span>
+            </div>
+            <div>
+              <label>Width:</label>
+              <input type="range" id="bagWidth" min="10" max="60" value="31" oninput="updateBagArea()">
+              <span id="bagWidthValue">31%</span>
+            </div>
+            <div>
+              <label>Height:</label>
+              <input type="range" id="bagHeight" min="10" max="60" value="45" oninput="updateBagArea()">
+              <span id="bagHeightValue">45%</span>
+            </div>
+          </div>
+          
+          <div>
+            <h3>🛒 Adjust Button Detection Area</h3>
+            <div>
+              <label>X Offset:</label>
+              <input type="range" id="buttonX" min="-50" max="50" value="0" oninput="updateButtonArea()">
+              <span id="buttonXValue">0%</span>
+            </div>
+            <div>
+              <label>Y Offset:</label>
+              <input type="range" id="buttonY" min="-50" max="50" value="0" oninput="updateButtonArea()">
+              <span id="buttonYValue">0%</span>
+            </div>
+            <div>
+              <label>Width Scale:</label>
+              <input type="range" id="buttonWidth" min="50" max="200" value="100" oninput="updateButtonArea()">
+              <span id="buttonWidthValue">100%</span>
+            </div>
+            <div>
+              <label>Height Scale:</label>
+              <input type="range" id="buttonHeight" min="50" max="200" value="100" oninput="updateButtonArea()">
+              <span id="buttonHeightValue">100%</span>
+            </div>
+          </div>
+          
+          <div>
+            <h3>👁️ Adjust Other Areas</h3>
+            <div>
+              <label>Left Width:</label>
+              <input type="range" id="otherLeftWidth" min="0" max="50" value="0" oninput="updateOtherAreas()">
+              <span id="otherLeftWidthValue">0%</span>
+            </div>
+            <div>
+              <label>Right Width:</label>
+              <input type="range" id="otherRightWidth" min="0" max="50" value="0" oninput="updateOtherAreas()">
+              <span id="otherRightWidthValue">0%</span>
+            </div>
+            <div>
+              <label>Top Offset:</label>
+              <input type="range" id="otherTopOffset" min="-20" max="20" value="0" oninput="updateOtherAreas()">
+              <span id="otherTopOffsetValue">0px</span>
+            </div>
+            <div>
+              <label>Height Scale:</label>
+              <input type="range" id="otherHeightScale" min="50" max="150" value="100" oninput="updateOtherAreas()">
+              <span id="otherHeightScaleValue">100%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ad-container" id="adContainer">
+        <img src="laxurypic.jpg" alt="Luxury Bag Advertisement" class="ad-image" id="adImage">
+        
+        <video class="ad-video" id="bagVideo" preload="auto" muted>
+          <source src="happy and show.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        
+        <video class="ad-video" id="buttonVideo" preload="auto" muted>
+          <source src="happy-buy.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        
+        <video class="ad-video" id="otherVideo" preload="auto" muted>
+          <source src="cry-leave.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+
+        <div class="bag-detection-area" id="bagDetectionArea"></div>
+        <div class="other-left-area" id="otherLeftArea"></div>
+        <div class="other-right-area" id="otherRightArea"></div>
+      </div>
+
+      <div style="position: relative;">
+        <button class="add-to-cart-btn" id="addToCartBtn">
+          🛒 Add to Cart - €299
+        </button>
+        <div class="button-detection-area" id="buttonDetectionArea"></div>
+      </div>
+    </div>
+
+      <div class="debug-info" id="debugInfo">
+    Gaze: Not detected<br>
+    Area: None<br>
+    Video: Idle<br>
+    Dwell: 0ms<br>
+    Debug: OFF
+  </div>
+
+  <!-- Data Recording Info -->
+  <div class="data-recording-info" id="dataRecordingInfo">
+    <div><span class="recording-status inactive" id="recordingStatus"></span>Data Recording</div>
+    <div>Gaze Points: <span id="gazePointCount">0</span></div>
+    <div>Fixations: <span id="fixationCount">0</span></div>
+    <div>Dwell Events: <span id="dwellEventCount">0</span></div>
+    <div>Calibration Points: <span id="calibrationPointCount">0</span></div>
+    <div>Session Time: <span id="sessionTime">00:00</span></div>
+  </div>
+
+  <!-- Gaze point indicator -->
+  <div class="gaze-point" id="gazePoint"></div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const loadingScreen = document.getElementById('loadingScreen');
+    const calibrationArea = document.getElementById('calibrationArea');
+    const shoppingContent = document.getElementById('shoppingContent');
+    const calibrationStatus = document.getElementById('calibrationStatus');
+    const adContainer = document.getElementById('adContainer');
+    const adImage = document.getElementById('adImage');
+    const bagVideo = document.getElementById('bagVideo');
+    const buttonVideo = document.getElementById('buttonVideo');
+    const otherVideo = document.getElementById('otherVideo');
+    const bagDetectionArea = document.getElementById('bagDetectionArea');
+    const buttonDetectionArea = document.getElementById('buttonDetectionArea');
+    const otherLeftAreaElement = document.getElementById('otherLeftArea');
+    const otherRightAreaElement = document.getElementById('otherRightArea');
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    const gazeDot = document.getElementById('gazeDot');
+    const gazePoint = document.getElementById('gazePoint');
+    const debugInfo = document.getElementById('debugInfo');
+    const calibrationRealtimeGaze = document.getElementById('calibrationRealtimeGaze');
+
+    // Calibration variables
+    let calibrationPoints = [
+      [5, 5], [50, 5], [95, 5],
+      [5, 50], [50, 50], [95, 50],
+      [5, 95], [50, 95], [95, 95]
+    ];
+    let currentCalibrationPoint = 0;
+    let calibrated = false;
+    let sessionActive = false;
+
+    // Gaze tracking variables
+    let gazeX = null;
+    let gazeY = null;
+    let videoPlaying = false;
+    let detectionStartTime = null;
+    let currentDetectionArea = null;
+    let lastVideoPlayed = null;
+
+    // Detection areas
+    let bagArea = null;
+    let buttonArea = null;
+    let otherLeftArea = null;
+    let otherRightArea = null;
+    let containerArea = null;
+
+    // System status
+    let systemInitialized = false;
+    let webgazerLoaded = false;
+    let debugMode = false;
+
+    // Eye tracking data recording variables
+    let eyeTrackingData = {
+      sessionInfo: {
+        startTime: null,
+        endTime: null,
+        participantId: null,
+        sessionId: null
+      },
+      calibration: {
+        points: [],
+        accuracy: [],
+        timestamp: null
+      },
+      gazeData: [],
+      fixations: [],
+      dwellEvents: [],
+      areaInteractions: [],
+      cartClicks: [] // 新增
+    };
+
+    // Data recording state
+    let isRecording = false;
+    let sessionStartTime = null;
+    let lastGazeTime = null;
+    let currentFixation = null;
+    let fixationThreshold = 100; // ms - minimum time for a fixation
+    let gazePointCount = 0;
+    let fixationCount = 0;
+    let dwellEventCount = 0;
+    let calibrationPointCount = 0;
+
+    // Dwell time thresholds (milliseconds)
+    const BAG_DWELL_TIME = 200; // 0.2 seconds for bag area
+    const BUTTON_DWELL_TIME = 100; // 0.1 seconds for button area
+    const OTHER_DWELL_TIME = 500; // 500ms for other areas
+
+    // Initialize WebGazer with error handling
+    function initializeWebGazer() {
+      console.log("Initializing WebGazer...");
+      updateDebugInfo("Initializing WebGazer...");
+      
+      try {
+        // Set regression type for better accuracy
+        webgazer.setRegression('ridge');
+        
+        // Set up gaze listener first
+        webgazer.setGazeListener(function(data, timestamp) {
+          if (!data || !data.x || !data.y) return;
+          
+          gazeX = data.x;
+          gazeY = data.y;
+          
+          // Update realtime gaze during calibration
+          if (!calibrated) {
+            updateCalibrationRealtimeGaze();
+          }
+          
+          // Only record and process gaze data when session is active
+          if (sessionActive) {
+            // Record gaze data
+            recordGazeData(data, timestamp);
+            
+            // Show gaze point indicator
+            if (gazePoint) {
+              gazePoint.style.display = 'block';
+              gazePoint.style.left = (gazeX - 10) + 'px';
+              gazePoint.style.top = (gazeY - 10) + 'px';
+            }
+            
+            // Show gaze dot if calibrated
+            if (calibrated) {
+              gazeDot.style.display = 'block';
+              gazeDot.style.left = (gazeX - 7) + 'px';
+              gazeDot.style.top = (gazeY - 7) + 'px';
+              
+              // Check gaze for shopping interaction
+              checkGazeAreas();
+            }
+          }
+        });
+        
+        // Configure WebGazer settings
+        webgazer.showVideo(false);
+        webgazer.showFaceOverlay(false);
+        webgazer.showFaceFeedbackBox(false);
+        webgazer.showPredictionPoints(false);
+        
+        // Begin WebGazer
+        webgazer.begin().then(() => {
+          console.log("WebGazer initialized successfully");
+          webgazerLoaded = true;
+          updateDebugInfo("WebGazer loaded");
+          hideLoadingScreen();
+        }).catch(error => {
+          console.error("WebGazer initialization failed:", error);
+          updateDebugInfo(`WebGazer failed: ${error.message}`);
+          calibrationStatus.textContent = "WebGazer initialization failed. Please refresh the page.";
+          calibrationStatus.className = "status status-error";
+          hideLoadingScreen();
+        });
+      } catch (error) {
+        console.error("WebGazer setup error:", error);
+        updateDebugInfo(`WebGazer error: ${error.message}`);
+        calibrationStatus.textContent = "WebGazer not available. Please check your browser.";
+        calibrationStatus.className = "status status-error";
+        hideLoadingScreen();
+      }
+    }
+
+    // Hide loading screen
+    function hideLoadingScreen() {
+      if (loadingScreen) {
+        loadingScreen.style.display = 'none';
+      }
+    }
+
+    // Update realtime gaze position during calibration
+    function updateCalibrationRealtimeGaze() {
+      if (gazeX && gazeY && calibrationArea) {
+        const rect = calibrationArea.getBoundingClientRect();
+        const relativeX = gazeX - rect.left;
+        const relativeY = gazeY - rect.top;
+        
+        // Check if gaze is within calibration area
+        if (relativeX >= 0 && relativeX <= rect.width && 
+            relativeY >= 0 && relativeY <= rect.height) {
+          calibrationRealtimeGaze.style.left = relativeX + 'px';
+          calibrationRealtimeGaze.style.top = relativeY + 'px';
+          calibrationRealtimeGaze.classList.add('show');
+        } else {
+          calibrationRealtimeGaze.classList.remove('show');
+        }
+      } else {
+        calibrationRealtimeGaze.classList.remove('show');
+      }
+    }
+
+    // Toggle debug mode
+    function toggleDebugMode() {
+      debugMode = !debugMode;
+      const adjustControls = document.getElementById('adjustControls');
+      
+      if (debugMode) {
+        bagDetectionArea.classList.add('show-debug');
+        buttonDetectionArea.classList.add('show-debug');
+        otherLeftAreaElement.classList.add('show-debug');
+        otherRightAreaElement.classList.add('show-debug');
+        if (adjustControls) adjustControls.classList.add('show');
+        updateDebugInfo("Debug mode: ON");
+      } else {
+        bagDetectionArea.classList.remove('show-debug');
+        buttonDetectionArea.classList.remove('show-debug');
+        otherLeftAreaElement.classList.remove('show-debug');
+        otherRightAreaElement.classList.remove('show-debug');
+        if (adjustControls) adjustControls.classList.remove('show');
+        updateDebugInfo("Debug mode: OFF");
+      }
+    }
+
+
+
+    // Update bag area from adjustment controls
+    function updateBagArea() {
+      if (!containerArea) return;
+      
+      const xPercent = document.getElementById('bagX').value;
+      const yPercent = document.getElementById('bagY').value;
+      const widthPercent = document.getElementById('bagWidth').value;
+      const heightPercent = document.getElementById('bagHeight').value;
+      
+      // Update display values
+      document.getElementById('bagXValue').textContent = xPercent + '%';
+      document.getElementById('bagYValue').textContent = yPercent + '%';
+      document.getElementById('bagWidthValue').textContent = widthPercent + '%';
+      document.getElementById('bagHeightValue').textContent = heightPercent + '%';
+      
+      // Update bag area
+      const containerRect = adContainer.getBoundingClientRect();
+      bagArea = {
+        x: containerRect.left + containerRect.width * (xPercent / 100),
+        y: containerRect.top + containerRect.height * (yPercent / 100),
+        width: containerRect.width * (widthPercent / 100),
+        height: containerRect.height * (heightPercent / 100)
+      };
+      
+      // Update visual debug area
+      if (bagDetectionArea) {
+        bagDetectionArea.style.left = xPercent + '%';
+        bagDetectionArea.style.top = yPercent + '%';
+        bagDetectionArea.style.width = widthPercent + '%';
+        bagDetectionArea.style.height = heightPercent + '%';
+      }
+      
+      console.log("Bag area updated:", bagArea);
+    }
+
+    // Update button area from adjustment controls
+    function updateButtonArea() {
+      if (!buttonArea) return;
+      
+      const xOffset = document.getElementById('buttonX').value;
+      const yOffset = document.getElementById('buttonY').value;
+      const widthScale = document.getElementById('buttonWidth').value;
+      const heightScale = document.getElementById('buttonHeight').value;
+      
+      // Update display values
+      document.getElementById('buttonXValue').textContent = xOffset + '%';
+      document.getElementById('buttonYValue').textContent = yOffset + '%';
+      document.getElementById('buttonWidthValue').textContent = widthScale + '%';
+      document.getElementById('buttonHeightValue').textContent = heightScale + '%';
+      
+      // Update button area
+      const buttonRect = addToCartBtn.getBoundingClientRect();
+      const xOffsetPercent = xOffset / 100;
+      const yOffsetPercent = yOffset / 100;
+      const widthScalePercent = widthScale / 100;
+      const heightScalePercent = heightScale / 100;
+      
+      buttonArea = {
+        x: buttonRect.left + buttonRect.width * xOffsetPercent,
+        y: buttonRect.top + buttonRect.height * yOffsetPercent,
+        width: buttonRect.width * widthScalePercent,
+        height: buttonRect.height * heightScalePercent
+      };
+      
+      // Update visual debug area
+      if (buttonDetectionArea) {
+        buttonDetectionArea.style.left = xOffset + '%';
+        buttonDetectionArea.style.top = yOffset + '%';
+        buttonDetectionArea.style.width = widthScale + '%';
+        buttonDetectionArea.style.height = heightScale + '%';
+      }
+      
+      console.log("Button area updated:", buttonArea);
+    }
+
+    // Update other areas from adjustment controls
+    function updateOtherAreas() {
+      const leftWidthPercent = document.getElementById('otherLeftWidth').value;
+      const rightWidthPercent = document.getElementById('otherRightWidth').value;
+      const topOffset = document.getElementById('otherTopOffset').value;
+      const heightScale = document.getElementById('otherHeightScale').value;
+      
+      // Update display values
+      document.getElementById('otherLeftWidthValue').textContent = leftWidthPercent + '%';
+      document.getElementById('otherRightWidthValue').textContent = rightWidthPercent + '%';
+      document.getElementById('otherTopOffsetValue').textContent = topOffset + 'px';
+      document.getElementById('otherHeightScaleValue').textContent = heightScale + '%';
+      
+      // Get the image element to calculate other areas
+      const imageElement = document.querySelector('.ad-image');
+      const imageRect = imageElement ? imageElement.getBoundingClientRect() : null;
+      
+      if (imageRect) {
+        // Calculate adjusted dimensions
+        const leftWidth = (leftWidthPercent / 100) * window.innerWidth;
+        const rightWidth = (rightWidthPercent / 100) * window.innerWidth;
+        const adjustedTop = imageRect.top + parseInt(topOffset);
+        const adjustedHeight = imageRect.height * (heightScale / 100);
+        
+        // Left other area: from page left edge to image left edge + adjustment
+        otherLeftArea = {
+          x: 0, // Start from page left edge
+          y: adjustedTop, // Align with image top + offset
+          width: imageRect.left + leftWidth, // Width from page edge to image left + adjustment
+          height: adjustedHeight // Adjusted height
+        };
+        
+        // Right other area: from image right edge to page right edge + adjustment
+        otherRightArea = {
+          x: imageRect.right - rightWidth, // Start from image right edge - adjustment
+          y: adjustedTop, // Align with image top + offset
+          width: window.innerWidth - imageRect.right + rightWidth, // Width from adjusted start to page edge
+          height: adjustedHeight // Adjusted height
+        };
+        
+        // Update visual debug areas
+        if (otherLeftAreaElement) {
+          otherLeftAreaElement.style.left = '0px';
+          otherLeftAreaElement.style.top = `${adjustedTop}px`;
+          otherLeftAreaElement.style.width = `${imageRect.left + leftWidth}px`;
+          otherLeftAreaElement.style.height = `${adjustedHeight}px`;
+          otherLeftAreaElement.style.position = 'fixed';
+        }
+        
+        if (otherRightAreaElement) {
+          otherRightAreaElement.style.left = `${imageRect.right - rightWidth}px`;
+          otherRightAreaElement.style.top = `${adjustedTop}px`;
+          otherRightAreaElement.style.width = `${window.innerWidth - imageRect.right + rightWidth}px`;
+          otherRightAreaElement.style.height = `${adjustedHeight}px`;
+          otherRightAreaElement.style.position = 'fixed';
+        }
+        
+        console.log("Other areas updated:", { left: otherLeftArea, right: otherRightArea });
+      }
+    }
+
+    // Check if image and videos are loaded
+    function checkMediaFiles() {
+      console.log("Checking media files...");
+      
+      // Check image
+      if (adImage) {
+        adImage.onload = () => {
+          console.log("Image loaded successfully");
+          updateDebugInfo("Image loaded");
+        };
+        adImage.onerror = () => {
+          console.error("Image failed to load");
+          updateDebugInfo("Image failed to load");
+        };
+      }
+      
+      // Check videos
+      const videos = [
+        { name: 'Bag Video', element: bagVideo },
+        { name: 'Button Video', element: buttonVideo },
+        { name: 'Other Video', element: otherVideo }
+      ];
+      
+      videos.forEach(video => {
+        if (video.element) {
+          video.element.addEventListener('loadeddata', () => {
+            console.log(`${video.name} loaded`);
+            updateDebugInfo(`${video.name} loaded`);
+          });
+          video.element.addEventListener('error', (e) => {
+            console.error(`${video.name} failed:`, e);
+            updateDebugInfo(`${video.name} failed`);
+          });
+        }
+      });
+    }
+
+    // Calibration Functions
+    function createCalibrationPoint(x, y) {
+      const dot = document.createElement("div");
+      dot.className = "calibration-point";
+      dot.style.left = `${x - 10}px`;
+      dot.style.top = `${y - 10}px`;
+      dot.onclick = (event) => {
+        // Record calibration data for WebGazer
+        const rect = calibrationArea.getBoundingClientRect();
+        const calibX = rect.left + x;
+        const calibY = rect.top + y;
+        
+        // Record calibration point for eye tracking data
+        if (isRecording) {
+          recordCalibrationPoint(event.clientX, event.clientY, calibX, calibY);
+        }
+        
+        // Multiple clicks for better calibration
+        for (let i = 0; i < 5; i++) {
+          setTimeout(() => {
+            if (window.webgazer) {
+              webgazer.recordScreenPosition(calibX, calibY);
+            }
+          }, i * 50);
+        }
+        
+        dot.remove();
+        currentCalibrationPoint++;
+        updateCalibrationStatus();
+        
+        if (currentCalibrationPoint < calibrationPoints.length) {
+          setTimeout(showCalibrationPoint, 500); // Short delay between points
+        } else {
+          setTimeout(completeCalibration, 1000); // Wait a bit before completing
+        }
+      };
+      calibrationArea.appendChild(dot);
+    }
+
+    function showCalibrationPoint() {
+      const [percentX, percentY] = calibrationPoints[currentCalibrationPoint];
+      const x = (percentX / 100) * calibrationArea.offsetWidth;
+      const y = (percentY / 100) * calibrationArea.offsetHeight;
+      createCalibrationPoint(x, y);
+    }
+
+    function updateCalibrationStatus() {
+      const remaining = calibrationPoints.length - currentCalibrationPoint;
+      if (currentCalibrationPoint === 0) {
+        calibrationStatus.textContent = "Click the red dots to calibrate (9 points total)";
+        calibrationStatus.className = "status status-progress";
+      } else if (currentCalibrationPoint < calibrationPoints.length) {
+        calibrationStatus.textContent = `Calibration in progress... ${remaining} points remaining`;
+        calibrationStatus.className = "status status-progress";
+      }
+    }
+
+    function completeCalibration() {
+      calibrated = true;
+      sessionActive = true;
+      calibrationStatus.textContent = "✓ Calibration complete! The advertisement is now gaze-responsive.";
+      calibrationStatus.className = "status status-complete";
+      
+      // Hide calibration area and show shopping content
+      calibrationArea.style.display = 'none';
+      shoppingContent.style.display = 'block';
+      
+      // Show gaze dot
+      gazeDot.style.display = 'block';
+      
+      // Calculate detection areas
+      calculateDetectionAreas();
+      
+      console.log("=== Calibration Complete ===");
+      updateDebugInfo("Calibration complete - System ready");
+      
+      // Data recording continues throughout the experiment
+      console.log("Eye tracking data recording active for experiment");
+    }
+
+    function startCalibration() {
+      if (!webgazerLoaded) {
+        calibrationStatus.textContent = "WebGazer not loaded. Please wait or refresh the page.";
+        calibrationStatus.className = "status status-error";
+        return;
+      }
+      
+      currentCalibrationPoint = 0;
+      calibrated = false;
+      sessionActive = false;
+      
+      // Reset video state
+      videoPlaying = false;
+      detectionStartTime = null;
+      currentDetectionArea = null;
+      lastVideoPlayed = null;
+      
+      // Start data recording
+      startDataRecording();
+      
+      // Show calibration area, hide shopping content
+      calibrationArea.style.display = 'block';
+      shoppingContent.style.display = 'none';
+      gazeDot.style.display = 'none';
+      
+      // Clear calibration area (keep gazeDot and calibrationRealtimeGaze)
+      const existingPoints = calibrationArea.querySelectorAll('.calibration-point');
+      existingPoints.forEach(point => point.remove());
+      
+      updateCalibrationStatus();
+      showCalibrationPoint();
+    }
+
+    function resetSystem() {
+      // Stop data recording if active
+      if (isRecording) {
+        stopDataRecording();
+      }
+      
+      // Reset all states
+      calibrated = false;
+      sessionActive = false;
+      currentCalibrationPoint = 0;
+      videoPlaying = false;
+      detectionStartTime = null;
+      currentDetectionArea = null;
+      lastVideoPlayed = null;
+      
+      // Reset data recording counters
+      gazePointCount = 0;
+      fixationCount = 0;
+      dwellEventCount = 0;
+      calibrationPointCount = 0;
+      
+      // Reset UI
+      calibrationArea.style.display = 'block';
+      shoppingContent.style.display = 'none';
+      gazeDot.style.display = 'none';
+      
+      calibrationStatus.textContent = "Click 'Start Calibration' to begin the calibration process";
+      calibrationStatus.className = "status status-waiting";
+      
+      // Clear calibration area (keep gazeDot and calibrationRealtimeGaze)
+      const existingPoints = calibrationArea.querySelectorAll('.calibration-point');
+      existingPoints.forEach(point => point.remove());
+      
+      // Reset videos
+      resetVideo();
+      
+      // Update data recording UI
+      updateDataRecordingUI();
+      
+      console.log("System reset");
+      updateDebugInfo("System reset");
+    }
+
+    // Calculate detection areas
+    function calculateDetectionAreas() {
+      const containerRect = adContainer.getBoundingClientRect();
+      const buttonRect = addToCartBtn.getBoundingClientRect();
+      
+      // Log container position for debugging
+      console.log("Container position:", containerRect);
+      console.log("Button position:", buttonRect);
+      
+      // Bag area - adjusted for green bag position (typically center-right of image)
+      // Green bags are often displayed prominently in the center or right side
+      bagArea = {
+        x: containerRect.left + containerRect.width * 0.54,  // 54%
+        y: containerRect.top + containerRect.height * 0.55,   // 55%
+        width: containerRect.width * 0.31,                   // 31%
+        height: containerRect.height * 0.45                  // 45%
+      };
+      
+      // Update visual debug area
+      if (bagDetectionArea) {
+        bagDetectionArea.style.left = '54%';
+        bagDetectionArea.style.top = '55%';
+        bagDetectionArea.style.width = '31%';
+        bagDetectionArea.style.height = '45%';
+      }
+      
+      // Button area with padding for easier detection
+      const buttonPadding = 20; // Add padding around button
+      buttonArea = {
+        x: buttonRect.left - buttonPadding,
+        y: buttonRect.top - buttonPadding,
+        width: buttonRect.width + (buttonPadding * 2),
+        height: buttonRect.height + (buttonPadding * 2)
+      };
+      
+      // Update visual debug area for button
+      if (buttonDetectionArea) {
+        buttonDetectionArea.style.left = '-20%';
+        buttonDetectionArea.style.top = '-20%';
+        buttonDetectionArea.style.width = '140%';
+        buttonDetectionArea.style.height = '140%';
+      }
+      
+      // Get the image element to calculate other areas
+      const imageElement = document.querySelector('.ad-image');
+      const imageRect = imageElement ? imageElement.getBoundingClientRect() : null;
+      
+      if (imageRect) {
+        // Left other area: from page left edge to image left edge
+        otherLeftArea = {
+          x: 0, // Start from page left edge
+          y: imageRect.top, // Align with image top
+          width: imageRect.left, // Width from page edge to image left
+          height: imageRect.height // Same height as image
+        };
+        
+        // Right other area: from image right edge to page right edge  
+        otherRightArea = {
+          x: imageRect.right, // Start from image right edge
+          y: imageRect.top, // Align with image top
+          width: window.innerWidth - imageRect.right, // Width from image right to page edge
+          height: imageRect.height // Same height as image
+        };
+        
+        // Update visual debug areas
+        if (otherLeftAreaElement) {
+          otherLeftAreaElement.style.left = '0px';
+          otherLeftAreaElement.style.top = `${imageRect.top}px`;
+          otherLeftAreaElement.style.width = `${imageRect.left}px`;
+          otherLeftAreaElement.style.height = `${imageRect.height}px`;
+          otherLeftAreaElement.style.position = 'fixed';
+        }
+        
+        if (otherRightAreaElement) {
+          otherRightAreaElement.style.left = `${imageRect.right}px`;
+          otherRightAreaElement.style.top = `${imageRect.top}px`;
+          otherRightAreaElement.style.width = `${window.innerWidth - imageRect.right}px`;
+          otherRightAreaElement.style.height = `${imageRect.height}px`;
+          otherRightAreaElement.style.position = 'fixed';
+        }
+      } else {
+        // Fallback: use container area if image not found
+        otherLeftArea = {
+          x: containerRect.left,
+          y: containerRect.top,
+          width: containerRect.width,
+          height: containerRect.height
+        };
+        
+        otherRightArea = {
+          x: containerRect.left,
+          y: containerRect.top,
+          width: containerRect.width,
+          height: containerRect.height
+        };
+        
+        // Update visual debug areas - show full container
+        if (otherLeftAreaElement) {
+          otherLeftAreaElement.style.left = '0%';
+          otherLeftAreaElement.style.top = '0%';
+          otherLeftAreaElement.style.width = '100%';
+          otherLeftAreaElement.style.height = '100%';
+        }
+        
+        if (otherRightAreaElement) {
+          otherRightAreaElement.style.left = '0%';
+          otherRightAreaElement.style.top = '0%';
+          otherRightAreaElement.style.width = '100%';
+          otherRightAreaElement.style.height = '100%';
+        }
+      }
+      
+      // Container area
+      containerArea = {
+        x: containerRect.left,
+        y: containerRect.top,
+        width: containerRect.width,
+        height: containerRect.height
+      };
+      
+      console.log("Detection areas calculated:", {
+        bag: `(${bagArea.x.toFixed(0)}, ${bagArea.y.toFixed(0)}) ${bagArea.width.toFixed(0)}x${bagArea.height.toFixed(0)}`,
+        button: `(${buttonArea.x.toFixed(0)}, ${buttonArea.y.toFixed(0)}) ${buttonArea.width.toFixed(0)}x${buttonArea.height.toFixed(0)}`,
+        otherLeft: `(${otherLeftArea.x.toFixed(0)}, ${otherLeftArea.y.toFixed(0)}) ${otherLeftArea.width.toFixed(0)}x${otherLeftArea.height.toFixed(0)}`,
+        otherRight: `(${otherRightArea.x.toFixed(0)}, ${otherRightArea.y.toFixed(0)}) ${otherRightArea.width.toFixed(0)}x${otherRightArea.height.toFixed(0)}`,
+        container: `(${containerArea.x.toFixed(0)}, ${containerArea.y.toFixed(0)}) ${containerArea.width.toFixed(0)}x${containerArea.height.toFixed(0)}`
+      });
+      updateDebugInfo("Areas calculated");
+    }
+
+    
+    // Check gaze areas
+    function checkGazeAreas() {
+      if (!gazeX || !gazeY) return;
+      let detectedArea = null;
+      // 检查bag区域
+      if (bagArea && isPointInArea(gazeX, gazeY, bagArea)) {
+        detectedArea = 'bag';
+        bagDetectionArea.classList.add('detected');
+        console.log("Bag area detected!");
+      } else {
+        bagDetectionArea.classList.remove('detected');
+      }
+      // 检查button区域（只高亮，不触发视频）
+      if (!detectedArea && buttonArea && isPointInArea(gazeX, gazeY, buttonArea)) {
+        detectedArea = 'button';
+        buttonDetectionArea.classList.add('detected');
+        // 只做高亮
+        console.log("Button area detected (no video trigger)!");
+      } else if (detectedArea !== 'button') {
+        buttonDetectionArea.classList.remove('detected');
+      }
+      // 检查other区域
+      if (!detectedArea) {
+        const inLeftOther = otherLeftArea && isPointInArea(gazeX, gazeY, otherLeftArea);
+        const inRightOther = otherRightArea && isPointInArea(gazeX, gazeY, otherRightArea);
+        const inBag = bagArea && isPointInArea(gazeX, gazeY, bagArea);
+        const inButton = buttonArea && isPointInArea(gazeX, gazeY, buttonArea);
+        if ((inLeftOther || inRightOther) && !inBag && !inButton) {
+          detectedArea = 'other';
+          if (inLeftOther) {
+            otherLeftAreaElement.classList.add('detected');
+            otherRightAreaElement.classList.remove('detected');
+            console.log("Left other area detected!");
+          } else if (inRightOther) {
+            otherRightAreaElement.classList.add('detected');
+            otherLeftAreaElement.classList.remove('detected');
+            console.log("Right other area detected!");
+          }
+        }
+      } else {
+        otherLeftAreaElement.classList.remove('detected');
+        otherRightAreaElement.classList.remove('detected');
+      }
+      // 区域切换逻辑
+      if (detectedArea !== currentDetectionArea) {
+        currentDetectionArea = detectedArea;
+        if (detectedArea === 'bag' || detectedArea === 'other') {
+          detectionStartTime = Date.now();
+        } else {
+          detectionStartTime = null;
+        }
+      }
+      // 只对bag/other区域做dwell触发
+      let dwellTime = 0;
+      let dwellThreshold = 0;
+      if (currentDetectionArea === 'bag') {
+        dwellThreshold = BAG_DWELL_TIME;
+      } else if (currentDetectionArea === 'other') {
+        dwellThreshold = OTHER_DWELL_TIME;
+      } else {
+        dwellThreshold = 999999;
+      }
+      if ((currentDetectionArea === 'bag' || currentDetectionArea === 'other') && detectionStartTime) {
+        dwellTime = Date.now() - detectionStartTime;
+        if (dwellTime >= dwellThreshold) {
+          recordDwellEvent(currentDetectionArea, dwellTime, Date.now());
+          triggerVideo(currentDetectionArea);
+          lastVideoPlayed = currentDetectionArea;
+          detectionStartTime = null;
+        }
+      }
+      // Update debug info
+      const debugMsg = `Gaze: (${Math.round(gazeX)}, ${Math.round(gazeY)})<br>` +
+        `Area: ${currentDetectionArea || 'None'}<br>` +
+        `Video: ${videoPlaying ? 'Playing' : 'Ready'}<br>` +
+        `Dwell: ${currentDetectionArea ? `${dwellTime}ms / ${dwellThreshold}ms` : '0ms'}<br>` +
+        `Debug: ${debugMode ? 'ON' : 'OFF'}<br>` +
+        `Last Video: ${lastVideoPlayed || 'None'}`;
+      updateDebugInfo(debugMsg);
+    }
+
+    // Check if point is in area
+    function isPointInArea(x, y, area) {
+      const inArea = x >= area.x && x <= area.x + area.width &&
+                     y >= area.y && y <= area.y + area.height;
+      
+      // Log detailed debug info for bag area checks
+      if (area === bagArea && debugMode) {
+        console.log(`Bag area check: Point(${x.toFixed(0)}, ${y.toFixed(0)}) in Area(${area.x.toFixed(0)}, ${area.y.toFixed(0)}, ${area.width.toFixed(0)}, ${area.height.toFixed(0)}) = ${inArea}`);
+      }
+      
+      return inArea;
+    }
+
+    // Trigger video based on area
+    function triggerVideo(area) {
+      console.log(`triggerVideo called with area: ${area}, videoPlaying: ${videoPlaying}`);
+      
+      if (videoPlaying) {
+        console.log("Video already playing, skipping trigger");
+        return;
+      }
+      
+      videoPlaying = true;
+      let targetVideo = null;
+      
+      switch (area) {
+        case 'bag':
+          targetVideo = bagVideo;
+          console.log("Selected bag video");
+          updateDebugInfo("Playing bag video");
+          break;
+        case 'button':
+          targetVideo = buttonVideo;
+          console.log("Selected button video");
+          updateDebugInfo("Playing button video");
+          break;
+        case 'other':
+          targetVideo = otherVideo;
+          console.log("Selected other video");
+          updateDebugInfo("Playing other video");
+          break;
+        default:
+          console.log(`Unknown area: ${area}`);
+          videoPlaying = false;
+          return;
+      }
+      
+      if (targetVideo) {
+        console.log("Starting video transition...");
+        console.log("Target video element:", targetVideo);
+        console.log("Video src:", targetVideo.src);
+        
+        // Hide image and show video
+        adImage.style.opacity = '0';
+        setTimeout(() => {
+          adImage.style.display = 'none';
+          targetVideo.classList.add('active');
+          
+          // Ensure video is ready
+          if (targetVideo.readyState < 2) {
+            console.log("Video not ready, waiting...");
+            targetVideo.addEventListener('canplay', function playVideo() {
+              targetVideo.removeEventListener('canplay', playVideo);
+              playVideoNow();
+            });
+          } else {
+            playVideoNow();
+          }
+          
+          function playVideoNow() {
+            console.log("Attempting to play video...");
+            targetVideo.play().then(() => {
+              console.log(`Video playing successfully: ${area}`);
+              updateDebugInfo(`Video playing: ${area}`);
+            }).catch(error => {
+              console.error('Error playing video:', error);
+              updateDebugInfo(`Video failed: ${error.message}`);
+              videoPlaying = false;
+              // Reset if video fails
+              setTimeout(resetVideo, 1000);
+            });
+          }
+        }, 500);
+      } else {
+        console.log("No target video found");
+        videoPlaying = false;
+      }
+    }
+
+    // Reset video when it ends
+    function resetVideo() {
+      console.log("Resetting video state");
+      videoPlaying = false;
+      
+      // Don't clear lastVideoPlayed to allow same area to trigger again
+      
+      // Hide all videos
+      [bagVideo, buttonVideo, otherVideo].forEach(video => {
+        video.classList.remove('active');
+        video.pause();
+        video.currentTime = 0;
+      });
+      
+      // Show image
+      adImage.style.display = 'block';
+      setTimeout(() => {
+        adImage.style.opacity = '1';
+      }, 100);
+      
+      updateDebugInfo("Video reset - Ready for next interaction");
+    }
+
+    // Update debug info
+    function updateDebugInfo(message) {
+      if (debugInfo) {
+        debugInfo.innerHTML = message;
+      }
+      console.log('Debug:', message);
+    }
+
+    // Setup video listeners
+    function setupVideoListeners() {
+      [bagVideo, buttonVideo, otherVideo].forEach(video => {
+        video.addEventListener('ended', resetVideo);
+        video.addEventListener('error', (e) => {
+          console.error('Video error:', e);
+          updateDebugInfo(`Video error: ${e.message}`);
+          videoPlaying = false;
+          resetVideo();
+        });
+      });
+      
+
+    }
+
+    // Initialize everything
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("=== Shopping Gaze Fixed System ===");
+      
+      // Check media files
+      checkMediaFiles();
+      
+      // Setup video listeners
+      setupVideoListeners();
+      
+      // Initialize WebGazer after a short delay
+      setTimeout(initializeWebGazer, 1000);
+      
+      // Add window resize listener to recalculate other areas
+      window.addEventListener('resize', () => {
+        if (calibrated) {
+          calculateDetectionAreas();
+        }
+      });
+
+      // 2. 购物车按钮点击事件
+      addToCartBtn.addEventListener('click', function(e) {
+        showAddToCartPopup();
+        recordCartClickEvent(e);
+      });
+      function showAddToCartPopup() {
+        let popup = document.createElement('div');
+        popup.textContent = 'Added to shopping cart';
+        popup.style.position = 'fixed';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.background = 'rgba(0,0,0,0.8)';
+        popup.style.color = 'white';
+        popup.style.padding = '20px 40px';
+        popup.style.borderRadius = '10px';
+        popup.style.zIndex = 9999;
+        document.body.appendChild(popup);
+        setTimeout(() => document.body.removeChild(popup), 1500);
+      }
+      function recordCartClickEvent(e) {
+        eyeTrackingData.cartClicks.push({
+          timestamp: Date.now(),
+          x: e.clientX,
+          y: e.clientY
+        });
+      }
+      
+      systemInitialized = true;
+      console.log("System initialized");
+    });
+
+    // Make functions available globally
+    window.startCalibration = startCalibration;
+    window.resetSystem = resetSystem;
+    window.toggleDebugMode = toggleDebugMode;
+    window.updateBagArea = updateBagArea;
+    window.updateButtonArea = updateButtonArea;
+    window.updateOtherAreas = updateOtherAreas;
+    window.downloadEyeTrackingData = downloadEyeTrackingData;
+
+    // ===== EYE TRACKING DATA RECORDING FUNCTIONS =====
+
+    // Record gaze data point
+    function recordGazeData(data, timestamp) {
+      if (!isRecording) return;
+      
+      const currentTime = Date.now();
+      const sessionTime = currentTime - sessionStartTime;
+      
+      // Record raw gaze data
+      const gazePoint = {
+        timestamp: timestamp || currentTime,
+        sessionTime: sessionTime,
+        x: data.x,
+        y: data.y,
+        confidence: data.confidence || 0,
+        rawData: data
+      };
+      
+      eyeTrackingData.gazeData.push(gazePoint);
+      gazePointCount++;
+      
+      // Update fixation detection
+      detectFixation(gazePoint);
+      
+      // Update UI
+      updateDataRecordingUI();
+    }
+
+    // Detect fixations from gaze data
+    function detectFixation(gazePoint) {
+      const currentTime = Date.now();
+      
+      if (!currentFixation) {
+        // Start new fixation
+        currentFixation = {
+          startTime: currentTime,
+          startSessionTime: gazePoint.sessionTime,
+          x: gazePoint.x,
+          y: gazePoint.y,
+          points: [gazePoint]
+        };
+        lastGazeTime = currentTime;
+      } else {
+        // Check if gaze has moved significantly (more than 30 pixels)
+        const distance = Math.sqrt(
+          Math.pow(gazePoint.x - currentFixation.x, 2) + 
+          Math.pow(gazePoint.y - currentFixation.y, 2)
+        );
+        
+        if (distance > 30) {
+          // Gaze moved significantly, end current fixation
+          endFixation(currentTime);
+          
+          // Start new fixation
+          currentFixation = {
+            startTime: currentTime,
+            startSessionTime: gazePoint.sessionTime,
+            x: gazePoint.x,
+            y: gazePoint.y,
+            points: [gazePoint]
+          };
+        } else {
+          // Continue current fixation
+          currentFixation.points.push(gazePoint);
+        }
+        lastGazeTime = currentTime;
+      }
+    }
+
+    // End current fixation
+    function endFixation(endTime) {
+      if (!currentFixation) return;
+      
+      const duration = endTime - currentFixation.startTime;
+      
+      if (duration >= fixationThreshold) {
+        // Calculate average position
+        const avgX = currentFixation.points.reduce((sum, p) => sum + p.x, 0) / currentFixation.points.length;
+        const avgY = currentFixation.points.reduce((sum, p) => sum + p.y, 0) / currentFixation.points.length;
+        
+        const fixation = {
+          startTime: currentFixation.startTime,
+          endTime: endTime,
+          startSessionTime: currentFixation.startSessionTime,
+          endSessionTime: currentFixation.startSessionTime + duration,
+          duration: duration,
+          x: avgX,
+          y: avgY,
+          pointCount: currentFixation.points.length,
+          points: currentFixation.points
+        };
+        
+        eyeTrackingData.fixations.push(fixation);
+        fixationCount++;
+        
+        console.log(`Fixation recorded: ${duration}ms at (${avgX.toFixed(1)}, ${avgY.toFixed(1)})`);
+      }
+      
+      currentFixation = null;
+    }
+
+    // Record dwell event
+    function recordDwellEvent(area, dwellTime, triggerTime) {
+      if (!isRecording) return;
+      
+      const dwellEvent = {
+        timestamp: triggerTime,
+        sessionTime: triggerTime - sessionStartTime,
+        area: area,
+        dwellTime: dwellTime,
+        gazeX: gazeX,
+        gazeY: gazeY
+      };
+      
+      eyeTrackingData.dwellEvents.push(dwellEvent);
+      dwellEventCount++;
+      
+      // Also record as area interaction
+      const areaInteraction = {
+        timestamp: triggerTime,
+        sessionTime: triggerTime - sessionStartTime,
+        area: area,
+        type: 'dwell_trigger',
+        dwellTime: dwellTime,
+        gazeX: gazeX,
+        gazeY: gazeY
+      };
+      
+      eyeTrackingData.areaInteractions.push(areaInteraction);
+      
+      console.log(`Dwell event recorded: ${area} area, ${dwellTime}ms dwell`);
+    }
+
+    // Record calibration data
+    function recordCalibrationPoint(x, y, targetX, targetY, accuracy) {
+      const currentTime = Date.now();
+      
+      const calibrationPoint = {
+        timestamp: currentTime,
+        sessionTime: currentTime - sessionStartTime,
+        targetX: targetX,
+        targetY: targetY,
+        actualX: x,
+        actualY: y,
+        accuracy: accuracy || Math.sqrt(Math.pow(x - targetX, 2) + Math.pow(y - targetY, 2)),
+        pointNumber: calibrationPointCount + 1
+      };
+      
+      eyeTrackingData.calibration.points.push(calibrationPoint);
+      calibrationPointCount++;
+      
+      console.log(`Calibration point recorded: target(${targetX}, ${targetY}), actual(${x}, ${y}), accuracy: ${calibrationPoint.accuracy.toFixed(1)}px`);
+    }
+
+    // Start data recording
+    function startDataRecording() {
+      if (isRecording) return;
+      
+      isRecording = true;
+      sessionStartTime = Date.now();
+      
+      // Initialize session info
+      eyeTrackingData.sessionInfo = {
+        startTime: sessionStartTime,
+        endTime: null,
+        participantId: generateParticipantId(),
+        sessionId: generateSessionId()
+      };
+      
+      // Update UI
+      updateDataRecordingUI();
+      
+      console.log("Eye tracking data recording started");
+    }
+
+    // Stop data recording
+    function stopDataRecording() {
+      if (!isRecording) return;
+      
+      isRecording = false;
+      const endTime = Date.now();
+      
+      // End current fixation if exists
+      if (currentFixation) {
+        endFixation(endTime);
+      }
+      
+      // Update session info
+      eyeTrackingData.sessionInfo.endTime = endTime;
+      eyeTrackingData.sessionInfo.duration = endTime - sessionStartTime;
+      
+      // Calculate calibration accuracy
+      if (eyeTrackingData.calibration.points.length > 0) {
+        const avgAccuracy = eyeTrackingData.calibration.points.reduce((sum, p) => sum + p.accuracy, 0) / eyeTrackingData.calibration.points.length;
+        eyeTrackingData.calibration.averageAccuracy = avgAccuracy;
+        eyeTrackingData.calibration.timestamp = sessionStartTime;
+      }
+      
+      console.log("Eye tracking data recording stopped");
+      console.log("Session summary:", {
+        duration: eyeTrackingData.sessionInfo.duration,
+        gazePoints: gazePointCount,
+        fixations: fixationCount,
+        dwellEvents: dwellEventCount,
+        calibrationPoints: calibrationPointCount
+      });
+    }
+
+    // Update data recording UI
+    function updateDataRecordingUI() {
+      const recordingStatus = document.getElementById('recordingStatus');
+      const gazePointCountEl = document.getElementById('gazePointCount');
+      const fixationCountEl = document.getElementById('fixationCount');
+      const dwellEventCountEl = document.getElementById('dwellEventCount');
+      const calibrationPointCountEl = document.getElementById('calibrationPointCount');
+      const sessionTimeEl = document.getElementById('sessionTime');
+      
+      if (recordingStatus) {
+        recordingStatus.className = `recording-status ${isRecording ? 'active' : 'inactive'}`;
+      }
+      
+      if (gazePointCountEl) {
+        gazePointCountEl.textContent = gazePointCount;
+      }
+      
+      if (fixationCountEl) {
+        fixationCountEl.textContent = fixationCount;
+      }
+      
+      if (dwellEventCountEl) {
+        dwellEventCountEl.textContent = dwellEventCount;
+      }
+      
+      if (calibrationPointCountEl) {
+        calibrationPointCountEl.textContent = calibrationPointCount;
+      }
+      
+      if (sessionTimeEl && sessionStartTime) {
+        const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        sessionTimeEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }
+
+    // Generate participant ID
+    function generateParticipantId() {
+      return 'P' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    }
+
+    // Generate session ID
+    function generateSessionId() {
+      return 'S' + Date.now().toString(36).toUpperCase();
+    }
+
+    // Download eye tracking data
+    function downloadEyeTrackingData() {
+      if (isRecording) {
+        stopDataRecording();
+      }
+      
+      // Prepare data for download
+      const dataToExport = {
+        ...eyeTrackingData,
+        exportInfo: {
+          exportTime: new Date().toISOString(),
+          version: '1.0',
+          format: 'JSON'
+        }
+      };
+      
+      // Create CSV files for easier analysis
+      const csvData = {
+        gazeData: convertToCSV(eyeTrackingData.gazeData, ['timestamp', 'sessionTime', 'x', 'y', 'confidence']),
+        fixations: convertToCSV(eyeTrackingData.fixations, ['startTime', 'endTime', 'startSessionTime', 'endSessionTime', 'duration', 'x', 'y', 'pointCount']),
+        dwellEvents: convertToCSV(eyeTrackingData.dwellEvents, ['timestamp', 'sessionTime', 'area', 'dwellTime', 'gazeX', 'gazeY']),
+        areaInteractions: convertToCSV(eyeTrackingData.areaInteractions, ['timestamp', 'sessionTime', 'area', 'type', 'dwellTime', 'gazeX', 'gazeY']),
+        calibration: convertToCSV(eyeTrackingData.calibration.points, ['timestamp', 'sessionTime', 'targetX', 'targetY', 'actualX', 'actualY', 'accuracy', 'pointNumber']),
+        cartClicks: convertToCSV(eyeTrackingData.cartClicks, ['timestamp', 'x', 'y']) // 新增
+      };
+      
+      // Download JSON file
+      downloadFile('eye_tracking_data.json', JSON.stringify(dataToExport, null, 2), 'application/json');
+      
+      // Download CSV files
+      downloadFile('gaze_data.csv', csvData.gazeData, 'text/csv');
+      downloadFile('fixations.csv', csvData.fixations, 'text/csv');
+      downloadFile('dwell_events.csv', csvData.dwellEvents, 'text/csv');
+      downloadFile('area_interactions.csv', csvData.areaInteractions, 'text/csv');
+      downloadFile('calibration.csv', csvData.calibration, 'text/csv');
+      downloadFile('cart_clicks.csv', csvData.cartClicks, 'text/csv'); // 新增
+      
+      console.log("Eye tracking data downloaded");
+    }
+
+    // Convert data to CSV format
+    function convertToCSV(data, fields) {
+      if (data.length === 0) return '';
+      
+      const headers = fields.join(',');
+      const rows = data.map(item => 
+        fields.map(field => {
+          const value = item[field];
+          return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+        }).join(',')
+      );
+      
+      return headers + '\n' + rows.join('\n');
+    }
+
+    // Download file helper
+    function downloadFile(filename, content, contentType) {
+      const blob = new Blob([content], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Update session timer
+    setInterval(() => {
+      if (isRecording) {
+        updateDataRecordingUI();
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
